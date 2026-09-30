@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.palashai.ai.translation.DeterministicTranslator
 import com.palashai.ai.tts.SantaliTtsEngine
 import com.palashai.data.Flashcard
 import com.palashai.data.FlashcardTopic
@@ -95,10 +94,6 @@ class FlashcardViewModel(application: Application) : AndroidViewModel(applicatio
         _isFlipped.value = !_isFlipped.value
     }
 
-    fun getSantaliTranslation(hindiText: String): String {
-        return DeterministicTranslator.translate(hindiText)
-    }
-
     fun speakFlashcard(card: Flashcard, isQuestionSide: Boolean) {
         if (!santaliTtsEngine.isInitialized) {
             Log.e(TAG, "TTS Engine not initialized yet")
@@ -106,15 +101,9 @@ class FlashcardViewModel(application: Application) : AndroidViewModel(applicatio
         }
 
         val textToSpeak = if (isQuestionSide) {
-            card.hindiQuestion.ifEmpty { card.question }
+            card.hindi
         } else {
-            // Answer side: Speak Santali if supported, else Hindi fallback
-            if (santaliTtsEngine.isSantaliSupported) {
-                val santaliText = DeterministicTranslator.translate(card.hindiAnswer)
-                if (santaliText.contains("not available")) card.hindiAnswer else santaliText
-            } else {
-                card.hindiAnswer
-            }
+            card.santali
         }
 
         Log.d(TAG, "Speaking: $textToSpeak")

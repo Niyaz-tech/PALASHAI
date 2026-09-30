@@ -2,122 +2,227 @@ package com.palashai.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DownloadDone
+import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.palashai.data.Worksheet
+import com.palashai.data.WorksheetTask
+import com.palashai.repository.WorksheetRepository
 import com.palashai.ui.components.PalashAppBar
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorksheetDetailScreen(navController: NavHostController, worksheetId: String) {
-    // In a real app, we would fetch data based on worksheetId.
-    // For the MVP, we'll show consistent placeholder content based on the request.
-    val worksheetTitle = when(worksheetId) {
-        "1" -> "Alphabet Matching"
-        "2" -> "Counting Fruits"
-        "3" -> "Animals and Sounds"
-        "4" -> "Family Tree"
-        else -> "Worksheet"
-    }
+    val worksheet = remember(worksheetId) { WorksheetRepository.getWorksheetById(worksheetId) }
+    var isSaved by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
         topBar = {
             PalashAppBar(
-                title = "Worksheet View",
+                title = "Worksheet Activity",
                 onBackClick = { navController.popBackStack() },
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            Text(
-                text = worksheetTitle,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Primary Education • Jharkhand Curriculum",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        if (worksheet == null) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Worksheet not found")
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = worksheet.emoji, style = MaterialTheme.typography.displaySmall)
+                    Spacer(Modifier.width(12.dp))
+                    Column {
                         Text(
-                            text = "Worksheet Instructions",
-                            style = MaterialTheme.typography.titleMedium,
+                            text = worksheet.title,
+                            style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold
                         )
+                        Text(
+                            text = "Grade ${worksheet.grade} • ${worksheet.subject}",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Text(
-                        text = "Hindi Instruction:",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+
+                InstructionCard(worksheet)
+
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Text(
+                    text = "Activity Tasks",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                worksheet.tasks.forEachIndexed { index, task ->
+                    TaskItem(index + 1, task)
+                }
+                
+                Spacer(modifier = Modifier.height(32.dp))
+                
+                Button(
+                    onClick = { 
+                        scope.launch {
+                            isSaved = true
+                            snackbarHostState.showSnackbar("Worksheet saved to Offline Library")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSaved) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
                     )
-                    Text(
-                        text = "दी गई गतिविधियों को ध्यान से पढ़ें और अपनी उत्तर पुस्तिका में हल करें।",
-                        style = MaterialTheme.typography.bodyLarge
+                ) {
+                    Icon(
+                        if (isSaved) Icons.Default.DownloadDone else Icons.Default.SaveAlt, 
+                        contentDescription = null
                     )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Text(
-                        text = "Santali Guide:",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                    Text(
-                        text = "ᱮᱢ ᱟᱠᱟᱱ ᱠᱟᱹᱢᱤ ᱠᱚ ᱫᱷᱮᱭᱟᱱ ᱛᱮ ᱯᱟᱲᱦᱟᱣ ᱢᱮ ᱟᱨ ᱟᱢᱟᱜ ᱠᱷᱟᱛᱟ ᱨᱮ ᱚᱞ ᱢᱮ᱾",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (isSaved) "Saved to Device" else "Save for Offline Use")
+                }
+                
+                Spacer(modifier = Modifier.height(48.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun InstructionCard(worksheet: Worksheet) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Bilingual Instructions",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Text(
+                text = "Hindi:",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = worksheet.hindiInstruction,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Text(
+                text = "Santali (Ol Chiki):",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.secondary
+            )
+            Text(
+                text = worksheet.santaliInstruction,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
+fun TaskItem(number: Int, task: WorksheetTask) {
+    var selectedOption by remember { mutableStateOf<String?>(null) }
+    val isCorrect = selectedOption == task.correctAnswer
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = if (isCorrect) CardDefaults.outlinedCardBorder().copy(brush = SolidColor(MaterialTheme.colorScheme.tertiary), width = 2.dp) else null
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Task $number",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.outline
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(text = task.hindiQuestion, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+            Text(text = task.santaliQuestion, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary)
+            
+            Spacer(Modifier.height(12.dp))
+            
+            Column(Modifier.selectableGroup()) {
+                task.options.forEach { option ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .selectable(
+                                selected = (option == selectedOption),
+                                onClick = { selectedOption = option },
+                                role = Role.RadioButton
+                            )
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = (option == selectedOption),
+                            onClick = null // null because the row is selectable
+                        )
+                        Text(
+                            text = option,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(start = 16.dp)
+                        )
+                    }
                 }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
             
-            Text(
-                text = "Content",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Placeholder for the actual worksheet task content
-            Text(
-                text = "This worksheet includes 10 interactive items designed for classroom participation. Teachers can use the Voice Translation feature to explain specific terms in Santali to ensure student comprehension.",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            Button(
-                onClick = { /* In future version: Download/Export PDF */ },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Print / Export Worksheet")
+            if (isCorrect) {
+                Row(
+                    modifier = Modifier.padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Correct! / ᱥᱟᱹᱦᱤ ᱜᱮᱭᱟ!", color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }

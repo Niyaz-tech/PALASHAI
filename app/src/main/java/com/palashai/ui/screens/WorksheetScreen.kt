@@ -1,4 +1,4 @@
-package com.palashai.ui.screens
+                                                package com.palashai.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,69 +8,94 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.palashai.data.Worksheet
 import com.palashai.navigation.Screen
+import com.palashai.repository.WorksheetRepository
 import com.palashai.ui.components.PalashAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorksheetScreen(navController: NavHostController) {
-    val mockWorksheets = listOf(
-        WorksheetItem("1", "Grade 1", "Alphabet Matching", "Hindi/Santali"),
-        WorksheetItem("2", "Grade 1", "Counting Fruits", "Math"),
-        WorksheetItem("3", "Grade 2", "Animals and Sounds", "Science"),
-        WorksheetItem("4", "Grade 3", "Family Tree", "Social Studies"),
-    )
+    val worksheets = remember { WorksheetRepository.getAllWorksheets() }
+    var selectedGrade by remember { mutableStateOf(0) } // 0 means all
 
     Scaffold(
         topBar = {
             PalashAppBar(
-                title = "Worksheets",
+                title = "Educational Worksheets",
                 onBackClick = { navController.popBackStack() }
             )
         }
     ) { innerPadding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding() + 16.dp,
-                bottom = innerPadding.calculateBottomPadding() + 16.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(innerPadding)
         ) {
-            item {
-                Text(
-                    text = "Available Worksheets",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+            // Grade Filter Chips
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = selectedGrade == 0,
+                    onClick = { selectedGrade = 0 },
+                    label = { Text("All") }
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Downloadable offline resources for classroom activities",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                listOf(1, 2, 3, 4).forEach { grade ->
+                    FilterChip(
+                        selected = selectedGrade == grade,
+                        onClick = { selectedGrade = grade },
+                        label = { Text("Grade $grade") }
+                    )
+                }
             }
 
-            items(mockWorksheets) { worksheet ->
-                WorksheetCard(worksheet) {
-                    navController.navigate(Screen.WorksheetDetail.createRoute(worksheet.id))
+            val filteredWorksheets = if (selectedGrade == 0) worksheets 
+                                   else worksheets.filter { it.grade == selectedGrade }
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    Text(
+                        text = if (selectedGrade == 0) "All Worksheets" else "Grade $selectedGrade Worksheets",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Interactive offline activities for bilingual learning",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
                 }
+
+                items(filteredWorksheets) { worksheet ->
+                    WorksheetCard(worksheet) {
+                        navController.navigate(Screen.WorksheetDetail.createRoute(worksheet.id))
+                    }
+                }
+                
+                item { Spacer(modifier = Modifier.height(32.dp)) }
             }
         }
     }
 }
 
 @Composable
-fun WorksheetCard(worksheet: WorksheetItem, onClick: () -> Unit) {
+fun WorksheetCard(worksheet: Worksheet, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -91,12 +116,7 @@ fun WorksheetCard(worksheet: WorksheetItem, onClick: () -> Unit) {
                 modifier = Modifier.size(48.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.Description,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Text(text = worksheet.emoji, style = MaterialTheme.typography.headlineSmall)
                 }
             }
             
@@ -109,11 +129,10 @@ fun WorksheetCard(worksheet: WorksheetItem, onClick: () -> Unit) {
                 Text(
                     text = worksheet.title, 
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    lineHeight = MaterialTheme.typography.titleMedium.lineHeight
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${worksheet.grade} • ${worksheet.subject}",
+                    text = "Grade ${worksheet.grade} • ${worksheet.subject}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary
                 )
@@ -130,5 +149,3 @@ fun WorksheetCard(worksheet: WorksheetItem, onClick: () -> Unit) {
         }
     }
 }
-
-data class WorksheetItem(val id: String, val grade: String, val title: String, val subject: String)

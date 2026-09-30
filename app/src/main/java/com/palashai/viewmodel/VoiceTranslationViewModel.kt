@@ -6,10 +6,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.palashai.ai.asr.AsrEngine
 import com.palashai.ai.audio.AudioRecorder
-import com.palashai.ai.translation.DeterministicTranslator
+import com.palashai.ai.translation.IndicTrans2Translator
 import com.palashai.ai.tts.SantaliTtsEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +24,7 @@ class VoiceTranslationViewModel(application: Application) : AndroidViewModel(app
 
     private val audioRecorder = AudioRecorder(application)
     private val asrEngine = AsrEngine(application)
+    private val translator = IndicTrans2Translator(application)
     private val santaliTtsEngine = SantaliTtsEngine(
         context = application,
         onReady = { isSupported ->
@@ -67,12 +69,19 @@ class VoiceTranslationViewModel(application: Application) : AndroidViewModel(app
     init {
         viewModelScope.launch {
             _uiState.value = RecordingState.Initializing
-            Log.d(TAG, "Initializing AsrEngine...")
-            asrEngine.init().onFailure {
-                Log.e(TAG, "AsrEngine init failed: ${it.message}")
-                _uiState.value = RecordingState.Error("ASR Init Failed: ${it.message}")
-            }.onSuccess {
-                Log.d(TAG, "AsrEngine initialized successfully")
+            Log.d(TAG, "Initializing Engines...")
+            
+            val asrInit = withContext(Dispatchers.IO) { asrEngine.init() }
+            val nmtInit = withContext(Dispatchers.IO) { translator.init() }
+
+            if (asrInit.isFailure) {
+                Log.e(TAG, "AsrEngine init failed: ${asrInit.exceptionOrNull()?.message}")
+                _uiState.value = RecordingState.Error("ASR Init Failed")
+            } else if (nmtInit.isFailure) {
+                Log.e(TAG, "NMT Translator init failed: ${nmtInit.exceptionOrNull()?.message}")
+                _uiState.value = RecordingState.Error("NMT Init Failed. Models missing?")
+            } else {
+                Log.d(TAG, "All engines initialized successfully")
                 _uiState.value = RecordingState.Idle
             }
         }
@@ -91,7 +100,7 @@ class VoiceTranslationViewModel(application: Application) : AndroidViewModel(app
         timerJob = viewModelScope.launch {
             val startTime = System.currentTimeMillis()
             while (true) {
-                kotlinx.coroutines.delay(1000)
+                delay(1000)
                 _recordingDuration.value = (System.currentTimeMillis() - startTime) / 1000
             }
         }
@@ -118,31 +127,27 @@ class VoiceTranslationViewModel(application: Application) : AndroidViewModel(app
             val transcriptionResult = withContext(Dispatchers.IO) {
                 try {
                     val bytes = file.readBytes()
-                    Log.d(TAG, "Read ${bytes.size} bytes from PCM file")
                     if (bytes.isEmpty()) return@withContext Result.failure(Exception("Recording is empty"))
                     
-                    // Convert PCM bytes to normalized floats
                     val floatArray = convertPcm16ToFloat(bytes)
-                    Log.d(TAG, "Captured ${floatArray.size} audio samples. Starting ASR inference...")
                     asrEngine.transcribe(floatArray)
                 } catch (e: Exception) {
-                    Log.e(TAG, "Conversion/Processing Error: ${e.message}")
                     Result.failure(e)
                 }
             }
 
             transcriptionResult.onSuccess { text ->
-                Log.d(TAG, "ASR Success. Recognized text: '$text'")
+                Log.d(TAG, "ASR Success: '$text'")
                 _recognizedText.value = text
                 
-                // Perform Curated MVP Translation
-                val translation = DeterministicTranslator.translate(text)
-                Log.d(TAG, "Translation engine produced: $translation")
+                // Perform IndicTrans2 NMT Inference
+                val translation = withContext(Dispatchers.IO) {
+                    translator.translate(text)
+                }
+                Log.d(TAG, "NMT Result: $translation")
                 _translatedText.value = translation
                 
                 _uiState.value = RecordingState.Success(file.absolutePath)
-                
-                // Automatically trigger TTS after translation
                 speakCurrentTranslation()
             }.onFailure {
                 Log.e(TAG, "ASR Inference Failed: ${it.message}")
@@ -179,9 +184,7 @@ class VoiceTranslationViewModel(application: Application) : AndroidViewModel(app
     }
 
     fun stopRecording() {
-        Log.d(TAG, "Stop recording requested by UI")
         audioRecorder.stopRecording()
-        // Crucial: Do NOT cancel recordingJob here, as it needs to transition to processing
         timerJob?.cancel()
     }
 
@@ -191,6 +194,7 @@ class VoiceTranslationViewModel(application: Application) : AndroidViewModel(app
         recordingJob?.cancel()
         timerJob?.cancel()
         asrEngine.release()
+        translator.release()
         santaliTtsEngine.release()
     }
 }

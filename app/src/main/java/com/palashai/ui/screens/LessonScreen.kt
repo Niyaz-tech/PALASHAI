@@ -135,6 +135,10 @@ fun LessonScreen(
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 LessonSection(title = "Objective", content = lesson.objective)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LessonSection(title = "Learn", content = lesson.explanation)
                 
                 Spacer(modifier = Modifier.height(16.dp))
 

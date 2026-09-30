@@ -1,6 +1,7 @@
 package com.palashai.ui.screens
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -46,13 +47,14 @@ fun FlashcardScreen(
     
     val rotation by animateFloatAsState(
         targetValue = if (isFlipped) 180f else 0f,
+        animationSpec = tween(durationMillis = 400),
         label = "rotation"
     )
 
     Scaffold(
         topBar = {
             PalashAppBar(
-                title = "Flashcards",
+                title = "Bilingual Flashcards",
                 onBackClick = { navController.popBackStack() }
             )
         }
@@ -75,7 +77,7 @@ fun FlashcardScreen(
                     FilterChip(
                         selected = selectedClass == level,
                         onClick = { viewModel.selectClass(level) },
-                        label = { Text("Class $level") }
+                        label = { Text("Grade $level") }
                     )
                 }
             }
@@ -104,9 +106,9 @@ fun FlashcardScreen(
                 val currentCard = selectedTopic!!.cards[currentIndex]
                 
                 Text(
-                    text = "${selectedTopic!!.title} - Card ${currentIndex + 1} of ${selectedTopic!!.cards.size}",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
+                    text = "${selectedTopic!!.title} • ${currentIndex + 1}/${selectedTopic!!.cards.size}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.outline
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -115,15 +117,15 @@ fun FlashcardScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(350.dp)
+                        .height(380.dp)
                         .graphicsLayer {
                             rotationY = rotation
-                            cameraDistance = 8 * density
+                            cameraDistance = 12 * density
                         }
                         .clickable { viewModel.toggleFlip() },
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isFlipped) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primaryContainer
+                        containerColor = if (isFlipped) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceVariant
                     )
                 ) {
                     Box(
@@ -131,100 +133,114 @@ fun FlashcardScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         if (rotation <= 90f) {
-                            // Front - Question (English + Hindi)
+                            // Front - Hindi Concept
                             Column(
                                 modifier = Modifier.padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
                             ) {
+                                if (currentCard.emoji.isNotEmpty()) {
+                                    Text(
+                                        text = currentCard.emoji,
+                                        fontSize = 80.sp,
+                                        modifier = Modifier.padding(bottom = 16.dp)
+                                    )
+                                }
+                                
                                 Text(
-                                    text = currentCard.question,
-                                    style = MaterialTheme.typography.headlineMedium,
+                                    text = "In Hindi:",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                
+                                Spacer(modifier = Modifier.height(8.dp))
+                                
+                                Text(
+                                    text = currentCard.hindi,
+                                    style = MaterialTheme.typography.displayMedium,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = currentCard.hindiQuestion,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.secondary,
-                                    textAlign = TextAlign.Center
-                                )
                                 
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(24.dp))
                                 
-                                IconButton(onClick = {
-                                    if (isTtsSpeaking) viewModel.stopSpeaking() else viewModel.speakFlashcard(currentCard, true)
-                                }) {
+                                Button(
+                                    onClick = {
+                                        if (isTtsSpeaking) viewModel.stopSpeaking() else viewModel.speakFlashcard(currentCard, true)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (isTtsSpeaking) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                                    )
+                                ) {
                                     Icon(
                                         imageVector = if (isTtsSpeaking) Icons.Default.Stop else Icons.AutoMirrored.Filled.VolumeUp,
-                                        contentDescription = "Listen",
-                                        tint = if (isTtsSpeaking) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                                        contentDescription = "Listen"
                                     )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Listen")
                                 }
                             }
                         } else {
-                            // Back - Answer (English + Hindi + Santali)
+                            // Back - Santali / Ol Chiki Translation
                             Column(
                                 modifier = Modifier
                                     .graphicsLayer { rotationY = 180f }
                                     .padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
                             ) {
                                 Text(
-                                    text = "Answer:",
+                                    text = "In Santali (Ol Chiki):",
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.primary
                                 )
-                                Text(
-                                    text = currentCard.answer,
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    textAlign = TextAlign.Center
-                                )
-                                Text(
-                                    text = currentCard.hindiAnswer,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.secondary,
-                                    textAlign = TextAlign.Center
-                                )
                                 
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(8.dp))
                                 
-                                val santali = viewModel.getSantaliTranslation(currentCard.hindiAnswer)
                                 Text(
-                                    text = if (isNativeSantaliSupported) "Santali (MVP):" else "Santali (MVP - No voice):",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.tertiary
-                                )
-                                Text(
-                                    text = santali,
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    fontWeight = FontWeight.Bold,
+                                    text = currentCard.santali,
+                                    style = MaterialTheme.typography.displayMedium,
+                                    fontWeight = FontWeight.ExtraBold,
                                     textAlign = TextAlign.Center,
-                                    color = if (santali.contains("not available")) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.primary
                                 )
-
-                                if (currentCard.explanation.isNotEmpty()) {
+                                
+                                if (currentCard.english.isNotEmpty()) {
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        text = currentCard.explanation,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        textAlign = TextAlign.Center,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                        text = "(${currentCard.english})",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = MaterialTheme.colorScheme.outline
                                     )
                                 }
                                 
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Spacer(modifier = Modifier.height(32.dp))
                                 
-                                // Listen Button on back
-                                IconButton(onClick = {
-                                    if (isTtsSpeaking) viewModel.stopSpeaking() else viewModel.speakFlashcard(currentCard, false)
-                                }) {
-                                    Icon(
-                                        imageVector = if (isTtsSpeaking) Icons.Default.Stop else Icons.AutoMirrored.Filled.VolumeUp,
-                                        contentDescription = "Listen",
-                                        tint = if (isTtsSpeaking) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                                    )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Button(
+                                        onClick = {
+                                            if (isTtsSpeaking) viewModel.stopSpeaking() else viewModel.speakFlashcard(currentCard, false)
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (isTtsSpeaking) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.secondary
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isTtsSpeaking) Icons.Default.Stop else Icons.AutoMirrored.Filled.VolumeUp,
+                                            contentDescription = "Listen"
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Listen")
+                                    }
+                                    
+                                    if (!isNativeSantaliSupported) {
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            text = "(Hindi TTS)",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -239,38 +255,45 @@ fun FlashcardScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(
+                    FilledTonalIconButton(
                         onClick = { viewModel.previousCard() },
-                        enabled = currentIndex > 0
+                        enabled = currentIndex > 0,
+                        modifier = Modifier.size(56.dp)
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBackIos, contentDescription = "Previous")
                     }
 
-                    Button(onClick = { viewModel.toggleFlip() }) {
+                    Button(
+                        onClick = { viewModel.toggleFlip() },
+                        modifier = Modifier.height(56.dp).padding(horizontal = 16.dp)
+                    ) {
                         Icon(Icons.Default.Refresh, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text(if (isFlipped) "Show Question" else "Reveal Answer")
+                        Text(if (isFlipped) "Show Hindi" else "Flip to Santali")
                     }
 
-                    IconButton(
+                    FilledTonalIconButton(
                         onClick = { viewModel.nextCard() },
-                        enabled = currentIndex < selectedTopic!!.cards.size - 1
+                        enabled = currentIndex < selectedTopic!!.cards.size - 1,
+                        modifier = Modifier.size(56.dp)
                     ) {
                         Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = "Next")
                     }
                 }
             } else {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Select a topic to start learning")
+                    Text("Select a grade and topic to start learning")
                 }
             }
             
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Tap the card to flip",
+                text = "Tap the card to see the translation",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline
             )
+            
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

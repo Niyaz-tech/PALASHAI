@@ -16,6 +16,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
     }
 
     buildTypes {
@@ -34,9 +38,13 @@ android {
     }
 
     packaging {
+        jniLibs {
+            excludes.add("lib/x86/**")
+            excludes.add("lib/x86_64/**")
+            pickFirsts.add("**/lib/**/libsherpa-onnx-jni.so")
+        }
         resources {
-            pickFirsts.add("**/libonnxruntime.so")
-            pickFirsts.add("**/libsherpa-onnx-jni.so")
+            pickFirsts.add("**/lib/**/libsherpa-onnx-jni.so")
         }
     }
 }
@@ -54,10 +62,12 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
 
-    // ASR
-    implementation(libs.sherpa.onnx) {
-        exclude(group = "com.github.k2-fsa.sherpa-onnx", module = "sherpa-onnx-jvm")
-    }
+    // ASR (Production & POC - using local static-link AAR to avoid libonnxruntime.so conflicts)
+    implementation(files("libs/sherpa-onnx-static-link-onnxruntime-1.13.6.aar"))
+
+    // NMT POC (Isolated)
+    implementation(libs.onnxruntime.android)
+    implementation(libs.onnxruntime.extensions)
 
     // Room
     implementation(libs.androidx.room.runtime)

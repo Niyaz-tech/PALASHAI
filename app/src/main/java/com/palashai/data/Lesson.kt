@@ -5,6 +5,7 @@ data class Lesson(
     val classLevel: Int,
     val subject: String,
     val topic: String,
+    val explanation: String,
     val hindiText: String,
     val santaliText: String,
     val objective: String,

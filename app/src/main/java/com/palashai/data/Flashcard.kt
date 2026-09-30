@@ -2,11 +2,10 @@ package com.palashai.data
 
 data class Flashcard(
     val id: String,
-    val question: String,
-    val answer: String,
-    val explanation: String = "",
-    val hindiQuestion: String = "",
-    val hindiAnswer: String = ""
+    val hindi: String,
+    val santali: String,
+    val english: String = "",
+    val emoji: String = ""
 )
 
 data class FlashcardTopic(

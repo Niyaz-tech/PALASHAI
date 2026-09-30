@@ -136,13 +136,13 @@ fun VoiceTranslationScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Translation (Santali - Curated MVP Engine)",
+                        text = "Translation (Santali - IndicTrans2 AI)",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = translatedText.ifEmpty { "Curated Santali translation will appear here..." },
+                        text = translatedText.ifEmpty { "Santali translation will appear here..." },
                         style = MaterialTheme.typography.bodyLarge,
                         color = if (translatedText.isEmpty()) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -257,8 +257,8 @@ fun RecordingStatus(state: VoiceTranslationViewModel.RecordingState, duration: L
                     text = when (state) {
                         is VoiceTranslationViewModel.RecordingState.Initializing -> "🔄 Preparing offline speech engine..."
                         is VoiceTranslationViewModel.RecordingState.Recording -> "🎙️ Recording... ${duration}s"
-                        is VoiceTranslationViewModel.RecordingState.Processing -> "🧠 Transcribing Hindi speech..."
-                        is VoiceTranslationViewModel.RecordingState.Success -> "✅ Transcription successful."
+                        is VoiceTranslationViewModel.RecordingState.Processing -> "🧠 Transcribing & Translating..."
+                        is VoiceTranslationViewModel.RecordingState.Success -> "✅ Translation successful."
                         is VoiceTranslationViewModel.RecordingState.Error -> "❌ Error: ${state.message}"
                         else -> ""
                     },

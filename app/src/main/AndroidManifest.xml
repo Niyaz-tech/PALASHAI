@@ -26,6 +26,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ai.translation.poc.IsolatedPocActivity"
+            android:exported="true"
+            android:label="POC Runner"
+            android:theme="@style/Theme.PalashAI" />
     </application>
 
 </manifest>

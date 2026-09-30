@@ -28,6 +28,7 @@ class LessonRepository(private val lessonDao: LessonDao) {
             classLevel = classLevel,
             subject = subject,
             topic = topic,
+            explanation = explanation,
             hindiText = hindiText,
             santaliText = santaliText,
             objective = objective,
